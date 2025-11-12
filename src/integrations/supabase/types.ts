@@ -174,7 +174,7 @@ export type Database = {
           submitter_pseudonym_hash?: string | null
           submitter_user_id?: string | null
           title: string
-          tracking_id: string
+          tracking_id?: string
         }
         Update: {
           assigned_at?: string | null
