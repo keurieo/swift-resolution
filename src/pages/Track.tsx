@@ -6,41 +6,48 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Clock, CheckCircle2, AlertCircle, Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Track() {
+  const { toast } = useToast();
   const [trackingId, setTrackingId] = useState("");
   const [complaint, setComplaint] = useState<any>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock complaint data
-    setComplaint({
-      id: "EN-2024-00123",
-      title: "Library AC not working properly",
-      category: "Infrastructure",
-      status: "In Progress",
-      priority: "Medium",
-      submittedAt: "2024-01-15",
-      lastUpdate: "2024-01-18",
-      assignedTo: "Maintenance Department",
-      timeline: [
-        {
-          status: "Submitted",
-          date: "2024-01-15",
-          description: "Complaint received and acknowledged",
-        },
-        {
-          status: "Reviewed",
-          date: "2024-01-16",
-          description: "Assigned to Maintenance Department",
-        },
-        {
-          status: "In Progress",
-          date: "2024-01-18",
-          description: "Technician dispatched for inspection",
-        },
-      ],
-    });
+    setIsSearching(true);
+    setComplaint(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("complaints")
+        .select("*")
+        .eq("tracking_id", trackingId.toUpperCase())
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast({
+          title: "Not Found",
+          description: "No complaint found with this tracking ID.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setComplaint(data);
+    } catch (error: any) {
+      toast({
+        title: "Search Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -82,9 +89,13 @@ export default function Track() {
                 />
               </div>
               <div className="flex items-end">
-                <Button type="submit" className="bg-gradient-to-r from-primary to-primary-glow">
+                <Button 
+                  type="submit" 
+                  className="bg-gradient-to-r from-primary to-primary-glow"
+                  disabled={isSearching}
+                >
                   <Search className="w-4 h-4 mr-2" />
-                  Search
+                  {isSearching ? "Searching..." : "Search"}
                 </Button>
               </div>
             </form>
@@ -119,13 +130,12 @@ export default function Track() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Tracking ID</p>
-                        <p className="font-medium">{complaint.id}</p>
+                        <p className="font-medium">{complaint.tracking_id}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Assigned To</p>
-                        <p className="font-medium flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          {complaint.assignedTo}
+                        <p className="text-muted-foreground">Submitted</p>
+                        <p className="font-medium">
+                          {new Date(complaint.submitted_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -133,54 +143,26 @@ export default function Track() {
                 </div>
               </Card>
 
-              {/* Timeline */}
+              {/* Status Details */}
               <Card className="p-6 shadow-elevated border-border/50 bg-card/50 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold mb-6">Resolution Timeline</h3>
-                <div className="space-y-6">
-                  {complaint.timeline.map((event: any, index: number) => {
-                    const isLast = index === complaint.timeline.length - 1;
-                    return (
-                      <div key={index} className="flex gap-4 relative">
-                        {/* Timeline line */}
-                        {!isLast && (
-                          <div className="absolute left-5 top-12 bottom-0 w-px bg-gradient-to-b from-primary/50 to-transparent" />
-                        )}
-
-                        {/* Icon */}
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isLast
-                            ? "bg-gradient-to-br from-primary to-primary-glow shadow-glow"
-                            : "bg-muted"
-                        }`}>
-                          {event.status === "Submitted" && (
-                            <AlertCircle className={`w-5 h-5 ${isLast ? "text-white" : "text-muted-foreground"}`} />
-                          )}
-                          {event.status === "Reviewed" && (
-                            <Clock className={`w-5 h-5 ${isLast ? "text-white" : "text-muted-foreground"}`} />
-                          )}
-                          {event.status === "In Progress" && (
-                            <Users className={`w-5 h-5 ${isLast ? "text-white" : "text-muted-foreground"}`} />
-                          )}
-                          {event.status === "Resolved" && (
-                            <CheckCircle2 className={`w-5 h-5 ${isLast ? "text-white" : "text-muted-foreground"}`} />
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 pb-6">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h4 className="font-semibold">{event.status}</h4>
-                            <span className="text-sm text-muted-foreground">
-                              {event.date}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {event.description}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <h3 className="text-lg font-semibold mb-4">Complaint Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Description</p>
+                    <p className="text-sm">{complaint.description}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <Badge className={getStatusColor(complaint.status)}>
+                        {complaint.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Priority</p>
+                      <Badge variant="outline">{complaint.priority}</Badge>
+                    </div>
+                  </div>
                 </div>
               </Card>
 
