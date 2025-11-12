@@ -50,10 +50,15 @@ export const Hero = () => {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link to="/submit">
+            <Link to="/auth">
               <Button size="lg" className="group bg-gradient-to-r from-primary to-primary-glow hover:shadow-glow transition-all duration-300">
-                Submit Complaint
+                Get Started
                 <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link to="/submit">
+              <Button size="lg" variant="outline" className="border-2">
+                Submit Complaint
               </Button>
             </Link>
             <Link to="/track">
