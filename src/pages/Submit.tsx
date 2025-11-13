@@ -62,45 +62,86 @@ export default function Submit() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {
-      if (!user) {
-        throw new Error("User not authenticated");
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+
+    while (attempt < MAX_RETRIES) {
+      try {
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        // Insert complaint into database
+        const { data: complaint, error } = await supabase
+          .from("complaints")
+          .insert({
+            submitter_user_id: isAnonymous ? null : user.id,
+            category: category as any,
+            title: title,
+            description: description,
+            status: "Submitted" as any,
+            priority: "Low" as any,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          // Check for duplicate key error
+          if (error.code === '23505' && error.message.includes('tracking_id')) {
+            attempt++;
+            if (attempt < MAX_RETRIES) {
+              // Wait a bit before retrying to allow tracking ID generation
+              await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+              continue;
+            }
+            throw new Error(
+              "Unable to generate unique tracking ID after multiple attempts. Please try again in a moment."
+            );
+          }
+          throw error;
+        }
+
+        // Success! Show tracking ID prominently
+        toast({
+          title: "✓ Complaint Submitted Successfully",
+          description: `Your unique tracking number is: ${complaint.tracking_id}`,
+          duration: 5000,
+        });
+
+        // Show a follow-up toast with instructions
+        setTimeout(() => {
+          toast({
+            title: "Track Your Complaint",
+            description: "You can track your complaint status anytime from your dashboard or the tracking page.",
+          });
+        }, 2500);
+
+        // Redirect to dashboard after showing messages
+        setTimeout(() => {
+          navigate("/dashboard/student");
+        }, 3500);
+
+        return; // Exit the retry loop on success
+      } catch (error: any) {
+        if (attempt >= MAX_RETRIES - 1) {
+          // Final attempt failed
+          const isDuplicateError = error.message.includes('duplicate') || 
+                                   error.message.includes('tracking');
+          
+          toast({
+            title: "Submission Failed",
+            description: isDuplicateError 
+              ? "A duplicate entry was detected. Please try submitting again."
+              : error.message || "An unexpected error occurred. Please try again.",
+            variant: "destructive",
+          });
+          break;
+        }
+        attempt++;
       }
-
-      // Insert complaint into database
-      const { data: complaint, error } = await supabase
-        .from("complaints")
-        .insert({
-          submitter_user_id: isAnonymous ? null : user.id,
-          category: category as any,
-          title: title,
-          description: description,
-          status: "Submitted" as any,
-          priority: "Low" as any,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Complaint Submitted Successfully",
-        description: `Your tracking ID: ${complaint.tracking_id}. We'll keep you updated.`,
-      });
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        navigate("/dashboard/student");
-      }, 2000);
-    } catch (error: any) {
-      toast({
-        title: "Submission Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setIsSubmitting(false);
   };
 
   if (isLoading) {
