@@ -170,7 +170,11 @@ const StudentDashboard = () => {
                 complaints.map((complaint) => {
                   const StatusIcon = getStatusIcon(complaint.status);
                   return (
-                    <Card key={complaint.id} className="glass-effect p-6 border-border/50 hover:shadow-elevated transition-all">
+                    <Card 
+                      key={complaint.id} 
+                      className="glass-effect p-6 border-border/50 hover:shadow-elevated transition-all cursor-pointer"
+                      onClick={() => navigate(`/track?id=${complaint.tracking_id}`)}
+                    >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">

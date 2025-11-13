@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +12,25 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Track() {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [trackingId, setTrackingId] = useState("");
   const [complaint, setComplaint] = useState<any>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      setTrackingId(id);
+      handleSearch(undefined, id);
+    }
+  }, [searchParams]);
+
+  const handleSearch = async (e?: React.FormEvent, id?: string) => {
+    if (e) e.preventDefault();
+    
+    const searchId = id || trackingId;
+    if (!searchId) return;
+
     setIsSearching(true);
     setComplaint(null);
 
@@ -24,7 +38,7 @@ export default function Track() {
       const { data, error } = await supabase
         .from("complaints")
         .select("*")
-        .eq("tracking_id", trackingId.toUpperCase())
+        .eq("tracking_id", searchId.toUpperCase())
         .maybeSingle();
 
       if (error) throw error;
