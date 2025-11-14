@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Clock, CheckCircle, AlertCircle, LogOut, Plus } from "lucide-react";
+import { FileText, Clock, CheckCircle2, AlertTriangle, LogOut, Plus, ListChecks, FileStack } from "lucide-react";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -68,18 +68,34 @@ const StudentDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Resolved": return "text-success";
-      case "In Progress": return "text-info";
-      case "Pending": return "text-warning";
-      default: return "text-muted-foreground";
+      case "Resolved": 
+      case "Closed": 
+        return "text-success";
+      case "In Progress": 
+      case "Assigned": 
+        return "text-info";
+      case "Submitted": 
+      case "Reviewed": 
+        return "text-warning";
+      case "Escalated": 
+        return "text-destructive";
+      default: 
+        return "text-muted-foreground";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Resolved": return CheckCircle;
-      case "In Progress": return Clock;
-      default: return AlertCircle;
+      case "Resolved": 
+      case "Closed": 
+        return CheckCircle2;
+      case "In Progress": 
+      case "Assigned": 
+        return Clock;
+      case "Escalated": 
+        return AlertTriangle;
+      default: 
+        return FileText;
     }
   };
 
@@ -119,19 +135,47 @@ const StudentDashboard = () => {
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: "Total Complaints", value: complaints.length, icon: FileText, color: "primary" },
-              { label: "Pending", value: complaints.filter(c => c.status === "Submitted").length, icon: Clock, color: "warning" },
-              { label: "In Progress", value: complaints.filter(c => c.status === "In Progress").length, icon: AlertCircle, color: "info" },
-              { label: "Resolved", value: complaints.filter(c => c.status === "Resolved").length, icon: CheckCircle, color: "success" },
+              { 
+                label: "Total Complaints", 
+                value: complaints.length, 
+                icon: FileStack, 
+                color: "primary",
+                bgColor: "bg-primary/10",
+                textColor: "text-primary"
+              },
+              { 
+                label: "Pending", 
+                value: complaints.filter(c => c.status === "Submitted" || c.status === "Reviewed").length, 
+                icon: Clock, 
+                color: "warning",
+                bgColor: "bg-warning/10",
+                textColor: "text-warning"
+              },
+              { 
+                label: "In Progress", 
+                value: complaints.filter(c => c.status === "In Progress" || c.status === "Assigned").length, 
+                icon: ListChecks, 
+                color: "info",
+                bgColor: "bg-info/10",
+                textColor: "text-info"
+              },
+              { 
+                label: "Resolved", 
+                value: complaints.filter(c => c.status === "Resolved" || c.status === "Closed").length, 
+                icon: CheckCircle2, 
+                color: "success",
+                bgColor: "bg-success/10",
+                textColor: "text-success"
+              },
             ].map((stat, i) => (
-              <Card key={i} className="glass-effect p-6 border-border/50">
+              <Card key={i} className="glass-effect p-6 border-border/50 hover:shadow-elevated transition-all">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
                     <p className="text-3xl font-bold">{stat.value}</p>
                   </div>
-                  <div className={`w-12 h-12 bg-${stat.color}/10 rounded-xl flex items-center justify-center`}>
-                    <stat.icon className={`w-6 h-6 text-${stat.color}`} />
+                  <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center`}>
+                    <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
                   </div>
                 </div>
               </Card>
@@ -172,30 +216,46 @@ const StudentDashboard = () => {
                   return (
                     <Card 
                       key={complaint.id} 
-                      className="glass-effect p-6 border-border/50 hover:shadow-elevated transition-all cursor-pointer"
+                      className="glass-effect p-6 border-border/50 hover:shadow-elevated transition-all cursor-pointer group"
                       onClick={() => navigate(`/track?id=${complaint.tracking_id}`)}
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-mono text-primary">{complaint.tracking_id}</span>
-                            <span className="text-xs px-2 py-1 bg-secondary rounded-full">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="text-sm font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                              {complaint.tracking_id}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-secondary/50 rounded-full font-medium">
                               {complaint.category}
                             </span>
                           </div>
-                          <h3 className="text-lg font-semibold mb-1">{complaint.title}</h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
+                            {complaint.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                             {complaint.description}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Submitted {new Date(complaint.submitted_at).toLocaleDateString()}
+                            Submitted on {new Date(complaint.submitted_at).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <StatusIcon className={`w-5 h-5 ${getStatusColor(complaint.status)}`} />
-                          <span className={`font-medium ${getStatusColor(complaint.status)}`}>
-                            {complaint.status}
-                          </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                            complaint.status === "Resolved" || complaint.status === "Closed" 
+                              ? "bg-success/10" 
+                              : complaint.status === "In Progress" || complaint.status === "Assigned"
+                              ? "bg-info/10"
+                              : "bg-warning/10"
+                          }`}>
+                            <StatusIcon className={`w-4 h-4 ${getStatusColor(complaint.status)}`} />
+                            <span className={`font-medium text-sm ${getStatusColor(complaint.status)}`}>
+                              {complaint.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Card>

@@ -18,6 +18,8 @@ const Auth = () => {
   const [loginPassword, setLoginPassword] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [contactNumber, setContactNumber] = useState("");
@@ -77,6 +79,28 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(signupEmail)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      // Validate phone number format (basic validation)
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (contactNumber && !phoneRegex.test(contactNumber)) {
+        throw new Error("Please enter a valid phone number");
+      }
+
+      // Check if passwords match
+      if (signupPassword !== signupConfirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      // Check password length
+      if (signupPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
@@ -84,6 +108,7 @@ const Auth = () => {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: fullName,
+            username: username,
           },
         },
       });
@@ -210,6 +235,21 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="signup-username" className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Username
+                  </Label>
+                  <Input
+                    id="signup-username"
+                    type="text"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="signup-email" className="flex items-center gap-2">
                     <Mail className="w-4 h-4" />
                     Email
@@ -235,6 +275,22 @@ const Auth = () => {
                     placeholder="••••••••"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm-password" className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Confirm Password
+                  </Label>
+                  <Input
+                    id="signup-confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
                     required
                     minLength={6}
                   />
