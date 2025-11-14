@@ -384,6 +384,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_admin_role: { Args: { _user_email: string }; Returns: undefined }
       generate_tracking_id: { Args: never; Returns: string }
       has_role: {
         Args: {
