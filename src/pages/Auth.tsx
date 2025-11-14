@@ -128,14 +128,23 @@ const Auth = () => {
 
         if (studentError) throw studentError;
 
+        // Assign student role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: data.user.id,
+            role: "student",
+          });
+
+        if (roleError) console.error("Role assignment error:", roleError);
+
         toast({
-          title: "Account Created",
-          description: "Your account has been created successfully. You can now log in.",
+          title: "Success!",
+          description: "Account created successfully. Logging you in...",
         });
 
-        // Switch to login tab
-        const loginTab = document.querySelector('[value="login"]') as HTMLButtonElement;
-        loginTab?.click();
+        // Auto-login after successful registration
+        await checkUserRoleAndRedirect(data.user.id);
       }
     } catch (error: any) {
       toast({

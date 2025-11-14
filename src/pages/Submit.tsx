@@ -21,7 +21,6 @@ import { supabase } from "@/integrations/supabase/client";
 export default function Submit() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [category, setCategory] = useState("");
@@ -91,7 +90,7 @@ export default function Submit() {
         const { data: complaint, error } = await supabase
           .from("complaints")
           .insert({
-            submitter_user_id: isAnonymous ? null : user.id,
+            submitter_user_id: user.id,
             category: category as any,
             title: title,
             description: `${description}${buildingNumber ? `\n\nBuilding/Office: ${buildingNumber}` : ''}`,
@@ -187,28 +186,8 @@ export default function Submit() {
 
           <Card className="p-8 shadow-elevated border-border/50 bg-card/50 backdrop-blur-sm">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Anonymous submission toggle */}
-              <div className="flex items-center space-x-3 p-4 bg-accent/30 rounded-xl border border-border/30">
-                <Checkbox
-                  id="anonymous"
-                  checked={isAnonymous}
-                  onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
-                />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="anonymous"
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    Submit Anonymously
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Your identity will be protected throughout the process
-                  </p>
-                </div>
-              </div>
-
-              {/* Logged in user info (read-only) */}
-              {!isAnonymous && user && (
+              {/* Logged in user info */}
+              {user && (
                 <div className="p-4 bg-success/10 rounded-xl border border-success/20">
                   <p className="text-sm font-medium text-success mb-1">Submitting as:</p>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
