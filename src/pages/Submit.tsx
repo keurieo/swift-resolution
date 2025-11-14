@@ -27,7 +27,10 @@ export default function Submit() {
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [buildingNumber, setBuildingNumber] = useState("");
+  const [department, setDepartment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [departments, setDepartments] = useState<any[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -44,6 +47,14 @@ export default function Submit() {
       }
 
       setUser(session.user);
+      
+      // Fetch departments
+      const { data: deptData } = await supabase
+        .from("departments")
+        .select("id, name")
+        .order("name");
+      
+      setDepartments(deptData || []);
       setIsLoading(false);
     };
 
@@ -71,6 +82,11 @@ export default function Submit() {
           throw new Error("User not authenticated");
         }
 
+        // Validate building number if provided
+        if (buildingNumber && !/^[A-Za-z0-9\-\s]+$/.test(buildingNumber)) {
+          throw new Error("Please enter a valid building/office number");
+        }
+
         // Insert complaint into database
         const { data: complaint, error } = await supabase
           .from("complaints")
@@ -78,43 +94,42 @@ export default function Submit() {
             submitter_user_id: isAnonymous ? null : user.id,
             category: category as any,
             title: title,
-            description: description,
+            description: `${description}${buildingNumber ? `\n\nBuilding/Office: ${buildingNumber}` : ''}`,
             status: "Submitted" as any,
             priority: "Low" as any,
+            department_assigned: department || null,
           })
           .select()
           .single();
 
         if (error) {
-          // Check for duplicate key error
-          if (error.code === '23505' && error.message.includes('tracking_id')) {
+          // Check for duplicate key error (PostgreSQL error code 23505)
+          if (error.code === '23505') {
             attempt++;
             if (attempt < MAX_RETRIES) {
-              // Wait a bit before retrying to allow tracking ID generation
+              // Wait before retrying with exponential backoff
               await new Promise(resolve => setTimeout(resolve, 500 * attempt));
               continue;
             }
             throw new Error(
-              "Unable to generate unique tracking ID after multiple attempts. Please try again in a moment."
+              `A duplicate entry was detected. Please try again. ${attempt >= MAX_RETRIES ? 'If the problem persists, contact support.' : ''}`
             );
           }
+          
+          // Handle foreign key violations for department
+          if (error.code === '23503' && error.message.includes('department')) {
+            throw new Error("Invalid department selected. Please choose a valid department.");
+          }
+          
           throw error;
         }
 
-        // Success! Show tracking ID prominently
+        // Success! Show tracking ID prominently in toast
         toast({
           title: "✓ Complaint Submitted Successfully",
-          description: `Your unique tracking number is: ${complaint.tracking_id}`,
-          duration: 5000,
+          description: `Your unique tracking ID is: ${complaint.tracking_id}. Save this for future reference.`,
+          duration: 8000,
         });
-
-        // Show a follow-up toast with instructions
-        setTimeout(() => {
-          toast({
-            title: "Track Your Complaint",
-            description: "You can track your complaint status anytime from your dashboard or the tracking page.",
-          });
-        }, 2500);
 
         // Redirect to dashboard after showing messages
         setTimeout(() => {
@@ -202,7 +217,7 @@ export default function Submit() {
 
               {/* Category selection */}
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Category *</Label>
                 <Select value={category} onValueChange={setCategory} required>
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select a category" />
@@ -212,9 +227,41 @@ export default function Submit() {
                     <SelectItem value="Hostel">Hostel & Accommodation</SelectItem>
                     <SelectItem value="Infrastructure">Infrastructure</SelectItem>
                     <SelectItem value="Safety">Safety & Security</SelectItem>
-                    <SelectItem value="Administrative">Administrative</SelectItem>
+                    <SelectItem value="Administration">Administration</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Department selection */}
+              <div className="space-y-2">
+                <Label htmlFor="department">Department (Optional)</Label>
+                <Select value={department} onValueChange={setDepartment}>
+                  <SelectTrigger id="department">
+                    <SelectValue placeholder="Select department if applicable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Building/Office Number */}
+              <div className="space-y-2">
+                <Label htmlFor="building">Building/Office Number (Optional)</Label>
+                <Input
+                  id="building"
+                  placeholder="e.g., Building A, Room 101"
+                  value={buildingNumber}
+                  onChange={(e) => setBuildingNumber(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Specify the location if relevant to your complaint
+                </p>
               </div>
 
               {/* Title */}
