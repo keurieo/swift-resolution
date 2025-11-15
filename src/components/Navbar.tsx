@@ -72,7 +72,7 @@ export const Navbar = () => {
       className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-border/50 shadow-soft"
     >
       <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center h-16 gap-6">
           {/* Logo */}
           <Link 
             to={user ? "/dashboard/student" : "/"} 
@@ -87,7 +87,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Navigation links */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-1">
             {links.map((link) => {
               const isActive = location.pathname === link.to;
               const Icon = link.icon;
@@ -116,6 +116,7 @@ export const Navbar = () => {
           </div>
 
           {/* User menu */}
+          <div className="ml-auto">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -152,6 +153,7 @@ export const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          </div>
         </div>
       </div>
     </motion.nav>

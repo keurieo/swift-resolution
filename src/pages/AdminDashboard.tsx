@@ -14,7 +14,20 @@ import {
   Users,
   TrendingUp,
   Activity,
+  Settings,
+  Mail,
+  Lock,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -30,6 +43,10 @@ const AdminDashboard = () => {
     critical: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -123,6 +140,81 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleUpdateEmail = async () => {
+    if (!newEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter a new email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Check your new email for confirmation",
+      });
+      setNewEmail("");
+      setShowSettings(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Password updated successfully",
+      });
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowSettings(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center">
@@ -143,17 +235,86 @@ const AdminDashboard = () => {
           transition={{ duration: 0.6 }}
         >
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
+              <h1 className="text-3xl font-bold gradient-text mb-2">Admin Dashboard</h1>
               <p className="text-muted-foreground">
-                Welcome, {profile?.full_name || user?.email}
+                Welcome back, {profile?.full_name || user?.email}
               </p>
             </div>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Account Settings</DialogTitle>
+                    <DialogDescription>
+                      Update your email address or password
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Update Email
+                      </h3>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">New Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="new-email@example.com"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                        />
+                      </div>
+                      <Button onClick={handleUpdateEmail} className="w-full">
+                        Update Email
+                      </Button>
+                    </div>
+
+                    <div className="border-t pt-6 space-y-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        Update Password
+                      </h3>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">New Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm">Confirm Password</Label>
+                        <Input
+                          id="confirm"
+                          type="password"
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                      </div>
+                      <Button onClick={handleUpdatePassword} className="w-full">
+                        Update Password
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button onClick={handleLogout} variant="outline" className="gap-2">
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
+            </div>
           </div>
 
           {/* Stats Grid */}
