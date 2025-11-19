@@ -47,6 +47,9 @@ const AdminDashboard = () => {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -215,6 +218,78 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleCreateAdmin = async () => {
+    if (!adminEmail || !adminPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (adminPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create the user account
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: adminEmail,
+      password: adminPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (signUpError) {
+      toast({
+        title: "Error",
+        description: signUpError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!signUpData.user) {
+      toast({
+        title: "Error",
+        description: "Failed to create user account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Assign admin role
+    const { error: roleError } = await supabase
+      .from("user_roles")
+      .insert({
+        user_id: signUpData.user.id,
+        role: "admin",
+      });
+
+    if (roleError) {
+      toast({
+        title: "Error",
+        description: "Account created but failed to assign admin role: " + roleError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: `Admin account created for ${adminEmail}`,
+    });
+    setAdminEmail("");
+    setAdminPassword("");
+    setShowCreateAdmin(false);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center">
@@ -243,6 +318,47 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex gap-2">
+              <Dialog open={showCreateAdmin} onOpenChange={setShowCreateAdmin}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="gap-2">
+                    <Users className="w-4 h-4" />
+                    Create Admin
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create Admin Account</DialogTitle>
+                    <DialogDescription>
+                      Create a new administrator account with email and password
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-email">Email Address</Label>
+                      <Input
+                        id="admin-email"
+                        type="email"
+                        placeholder="admin@example.com"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-password">Password</Label>
+                      <Input
+                        id="admin-password"
+                        type="password"
+                        placeholder="Enter password (min 6 characters)"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleCreateAdmin} className="w-full">
+                      Create Admin Account
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Dialog open={showSettings} onOpenChange={setShowSettings}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2">
